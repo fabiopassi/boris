@@ -18,7 +18,7 @@
 
 
 /* Symbolic constants */
-#define FONT "/usr/share/fonts/truetype/freefont/FreeSerif.ttf"
+#define FONT "./fonts/FreeSerif.ttf"
 #define WINDOW_HEIGHT 700
 #define WINDOW_WIDTH 700
 #define FPS 60
