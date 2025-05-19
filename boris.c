@@ -38,6 +38,27 @@
 #define MAX_TIME_DIRTY_WATER 60*FPS
 #define MAX_TIME_BEFORE_SKELETON 120*FPS
 #define FOOD_PIECES 6
+
+#define ICON_SIZE WINDOW_HEIGHT/12
+#define FOOD_ICON_X WINDOW_WIDTH/50
+#define FOOD_ICON_Y WINDOW_HEIGHT/50
+#define SPACING WINDOW_WIDTH/50
+
+#define BAR_LEN WINDOW_WIDTH/6
+#define BAR_HEIGHT WINDOW_HEIGHT/24
+#define FOOD_BAR_X (FOOD_ICON_X + ICON_SIZE + SPACING)
+#define FOOD_BAR_Y (FOOD_ICON_Y + ICON_SIZE/2 - BAR_HEIGHT/2)
+#define MAX_FOOD 30
+#define FOOD_LOSS_INTERVAL 30*FPS
+
+#define LIFE_ICON_X (FOOD_BAR_X + BAR_LEN + 3*SPACING)
+#define LIFE_ICON_Y FOOD_ICON_Y
+
+#define LIFE_BAR_X (LIFE_ICON_X + ICON_SIZE + SPACING)
+#define LIFE_BAR_Y FOOD_BAR_Y
+#define MAX_LIFE 100
+#define LIFE_LOSS_RATE MAX_LIFE*1.0/(60*FPS)
+
 #define random_int(MIN, MAX) (rand() % ((MAX)-(MIN)+1) + MIN)
 
 
@@ -98,6 +119,9 @@ typedef struct {
 const float dt = (float) 1.0/FPS;
 int quit = 0;
 Fish boris = {0};
+float life = MAX_LIFE;
+int food_level = MAX_FOOD;
+int food_loss_countup = 0;
 Plant algae_1 = {0};
 Plant algae_2 = {0};
 Plant bonsai = {0};
@@ -166,7 +190,7 @@ void init_food(){
     food.exists = 1;
 
     int dx = WINDOW_WIDTH/3;
-    int center_x = random_int(dx, WINDOW_WIDTH - food.width - dx);    
+    int center_x = random_int(dx, WINDOW_WIDTH - food.width - dx);
 
     for(int i = 0; i < FOOD_PIECES; i++){
         food.x[i] = random_int(center_x-dx, center_x+dx);
@@ -175,7 +199,7 @@ void init_food(){
         food.v_y[i] = MIN_VELOCITY;
         food.state[i] = NOT_EATEN;
     }
-    
+
     return;
 }
 
@@ -213,9 +237,9 @@ void move_fish(SDL_Rect* fish_rect) {
                 boris.v_y = dy / sqrt(min_dist) * MAX_VELOCITY * 2;
             }
         }
-        /* Check if the fish is arrived at the border and, in case, invert motion */
+        /* Check if the fish is arrived at the border and, in case, invert motion. On the top, do not let Boris go under life or food bars/icons */
         if (boris.x < 1) { boris.v_x = random_int(MIN_VELOCITY, MAX_VELOCITY); }
-        if (boris.y < 1) { boris.v_y = random_int(MIN_VELOCITY, MAX_VELOCITY); }
+        if (boris.y < FOOD_ICON_Y + ICON_SIZE) { boris.v_y = random_int(MIN_VELOCITY, MAX_VELOCITY); }
         if (boris.x > WINDOW_WIDTH - fish_rect->w - 1) { boris.v_x = (-1) * random_int(MIN_VELOCITY, MAX_VELOCITY); }
         if (boris.y > WINDOW_HEIGHT - fish_rect->h - 1) { boris.v_y = (-1) * random_int(MIN_VELOCITY, MAX_VELOCITY); }
 
@@ -261,6 +285,7 @@ void check_boris_is_eating(SDL_Rect* fish_rect){
         float dy = food.y[i] - boris.y;
         if (food.state[i] == NOT_EATEN && dx < fish_rect->w && dx > -food.width && dy < fish_rect->h && dy > -food.height){
             food.state[i] = EATEN;
+			if (food_level < MAX_FOOD) { food_level++; }
         }
     }
 
@@ -401,11 +426,14 @@ int main(int argc, char** argv) {
     SDL_Surface* bubble_surf = IMG_Load("./images/bubble_animation.png");
     SDL_Surface* bonsai_surf = IMG_Load("./images/bonsai.png");
     SDL_Surface* algae_surf = IMG_Load("./images/algae_animated.png");
+    SDL_Surface* food_icon_surf = IMG_Load("./images/food.jpeg");
+    SDL_Surface* life_icon_surf = IMG_Load("./images/life.jpeg");
+
     /* Load written text */
     SDL_Color basito_color = {255, 255, 255, SDL_ALPHA_OPAQUE};
     SDL_Surface* basito_surf = TTF_RenderText_Solid(font, F4_MESSAGE, basito_color);
 
-	if (!fish_right_surf || !fish_left_surf || !fish_dead_surf || !fish_skeleton_surf || !treasure_closed_surf || !treasure_open_surf || !bubble_surf || !bonsai_surf || !algae_surf || !basito_surf){
+	if (!fish_right_surf || !fish_left_surf || !fish_dead_surf || !fish_skeleton_surf || !treasure_closed_surf || !treasure_open_surf || !bubble_surf || !bonsai_surf || !algae_surf || !food_icon_surf || !life_icon_surf ||  !basito_surf){
 		fprintf(stderr, "Error in surfaces initialization: %s\n\n", SDL_GetError());
 		if (fish_left_surf != NULL){SDL_FreeSurface(fish_left_surf);}
 		if (fish_right_surf != NULL){SDL_FreeSurface(fish_right_surf);}
@@ -416,6 +444,8 @@ int main(int argc, char** argv) {
         if (bubble_surf != NULL){SDL_FreeSurface(bubble_surf);}
         if (bonsai_surf != NULL){SDL_FreeSurface(bonsai_surf);}
         if (algae_surf != NULL){SDL_FreeSurface(algae_surf);}
+        if (food_icon_surf != NULL){SDL_FreeSurface(food_icon_surf);}
+        if (life_icon_surf != NULL){SDL_FreeSurface(life_icon_surf);}
         if (basito_surf != NULL) {SDL_FreeSurface(basito_surf);}
 		SDL_DestroyRenderer(rend);
 		SDL_DestroyWindow(win);
@@ -447,11 +477,15 @@ int main(int argc, char** argv) {
     SDL_FreeSurface(bonsai_surf);
     SDL_Texture* algae_tex = SDL_CreateTextureFromSurface(rend, algae_surf);
     SDL_FreeSurface(algae_surf);
+    SDL_Texture* food_icon = SDL_CreateTextureFromSurface(rend, food_icon_surf);
+    SDL_FreeSurface(food_icon_surf);
+    SDL_Texture* life_icon = SDL_CreateTextureFromSurface(rend, life_icon_surf);
+    SDL_FreeSurface(life_icon_surf);
     /* Put text on texture */
     SDL_Texture* basito_tex = SDL_CreateTextureFromSurface(rend, basito_surf);
     SDL_FreeSurface(basito_surf);
 
-	if (!fish_left || !fish_right || !fish_dead || !fish_skeleton || !treasure_closed || !treasure_open || !bubble_tex || !bonsai_tex || !algae_tex || !basito_tex) {
+	if (!fish_left || !fish_right || !fish_dead || !fish_skeleton || !treasure_closed || !treasure_open || !bubble_tex || !bonsai_tex || !algae_tex || !food_icon || !life_icon || !basito_tex) {
 		fprintf(stderr, "Error in textures initialization: %s\n\n", SDL_GetError());
 		if (fish_left != NULL) {SDL_DestroyTexture(fish_left);}
 		if (fish_right != NULL) {SDL_DestroyTexture(fish_right);}
@@ -462,6 +496,8 @@ int main(int argc, char** argv) {
         if (bubble_tex != NULL) {SDL_DestroyTexture(bubble_tex);}
         if (bonsai_tex != NULL) {SDL_DestroyTexture(bonsai_tex);}
         if (algae_tex != NULL) {SDL_DestroyTexture(algae_tex);}
+        if (food_icon != NULL) {SDL_DestroyTexture(food_icon);}
+        if (life_icon != NULL) {SDL_DestroyTexture(life_icon);}
         if (basito_tex != NULL) {SDL_DestroyTexture(basito_tex);}
 		SDL_DestroyRenderer(rend);
 		SDL_DestroyWindow(win);
@@ -523,12 +559,30 @@ int main(int argc, char** argv) {
     algae_2_src_rect.x = algae_2.animation_step * algae_2_src_rect.w;
     algae_2_src_rect.y = 0;
 
+    SDL_Rect food_life_icon_rect;
+	food_life_icon_rect.w = ICON_SIZE;
+	food_life_icon_rect.h = ICON_SIZE;
+
     SDL_Rect basito_rect;
     SDL_QueryTexture(basito_tex, NULL, NULL, &basito_rect.w, &basito_rect.h);
     basito_rect.x = (WINDOW_WIDTH - basito_rect.w) / 2;
     basito_rect.y = (WINDOW_HEIGHT - basito_rect.h) / 2;
 
     SDL_Rect food_rect;
+
+	SDL_Rect life_bar;
+	life_bar.h = BAR_HEIGHT;
+	life_bar.x = LIFE_BAR_X;
+	life_bar.y = LIFE_BAR_Y;
+
+	SDL_Rect food_bar;
+	food_bar.h = BAR_HEIGHT;
+	food_bar.x = FOOD_BAR_X;
+	food_bar.y = FOOD_BAR_Y;
+
+	SDL_Rect background_bar;
+	background_bar.w = BAR_LEN;
+	background_bar.h = BAR_HEIGHT;
 
     /* Initialize everything (except bubble, initially non-existent) */
     init_fish(&fish_rect);
@@ -625,12 +679,24 @@ int main(int argc, char** argv) {
             /* Move food, if existent */
             if (food.exists){ move_food(); }
 
-            /* Check if boris has eaten the food */
+            /* Check if boris has eaten the food (and increase food bar) */
             if (food.exists){ check_boris_is_eating(&fish_rect); }
 
             /* Update food existence (if all eaten, the food.exists variable is zero) */
             food.exists = 0;
-            for (int i = -1; ++i < FOOD_PIECES; food.exists += food.state[i]);
+            for (int i = -1; ++i < FOOD_PIECES; food.exists += food.state[i]){};
+
+			/* If food bar is empty, lose life. If food bar is not empty and life is not full, gain life. If life is empty, Boris dies. */
+            if (food_level == 0 && boris.health_state == ALIVE) { life -= LIFE_LOSS_RATE; }
+            if (life < MAX_LIFE && food_level > 0 && boris.health_state == ALIVE) { life += 5 * LIFE_LOSS_RATE; }
+            if (life <= 0){ boris.health_state = DEAD; }
+
+			/* If enough steps are passed, reduce boris food */
+			if (food_loss_countup++ == FOOD_LOSS_INTERVAL){
+				food_loss_countup = 0;
+				if (food_level > 0) { food_level--; }
+			}
+			if (food_level == 0){ food_loss_countup = 0; }
 
             /* Move boris (attracted by food, if exists) */
             move_fish(&fish_rect);
@@ -703,7 +769,7 @@ int main(int argc, char** argv) {
                 }
             }
 
-            /* Draw food */
+            /* Draw food pieces */
             for (int i = 0; i < FOOD_PIECES; i++){
                 if (food.state[i] == NOT_EATEN){
                     food_rect.x = (int) food.x[i];
@@ -735,6 +801,36 @@ int main(int argc, char** argv) {
 	            algae_2_src_rect.x = algae_2.animation_step * algae_2_src_rect.w;
             }
             SDL_RenderCopy(rend, algae_tex, &algae_2_src_rect, &algae_2_rect);
+
+            /* Draw food icon */
+            food_life_icon_rect.x = FOOD_ICON_X;
+            food_life_icon_rect.y = FOOD_ICON_Y;
+            SDL_RenderCopy(rend, food_icon, NULL, &food_life_icon_rect);
+
+			/* Draw food bar */
+			background_bar.x = FOOD_BAR_X;
+			background_bar.y = FOOD_BAR_Y;
+            SDL_SetRenderDrawColor(rend, 255, 255, 255, 255);
+            SDL_RenderFillRect(rend, &background_bar);
+
+			food_bar.w = BAR_LEN * food_level / MAX_FOOD ;
+            SDL_SetRenderDrawColor(rend, 150, 100, 10, 255);
+            SDL_RenderFillRect(rend, &food_bar);
+
+            /* Draw life icon */
+            food_life_icon_rect.x = LIFE_ICON_X;
+            food_life_icon_rect.y = LIFE_ICON_Y;
+            SDL_RenderCopy(rend, life_icon, NULL, &food_life_icon_rect);
+
+			/* Draw life bar */
+			background_bar.x = LIFE_BAR_X;
+			background_bar.y = LIFE_BAR_Y;
+            SDL_SetRenderDrawColor(rend, 255, 255, 255, 255);
+            SDL_RenderFillRect(rend, &background_bar);
+
+			life_bar.w = (int) BAR_LEN * life / MAX_LIFE ;
+			SDL_SetRenderDrawColor(rend, 200, 10, 10, 255);
+            SDL_RenderFillRect(rend, &life_bar);
 
             /* Water background  */
             SDL_SetRenderDrawColor(rend, (int) red, (int) green, (int) blue, 255);

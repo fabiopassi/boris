@@ -23,7 +23,7 @@ Per compilare ed eseguire il programma, basta digitare il seguente comando (dopo
 Durante l'esecuzione, puoi premere i seguenti comandi per attivare le seguenti funzionalità:
 
 - "C": pulisci l'acqua. Nel tempo, la boccia si sporca e l'acqua diventa verde. Se non la pulisci per troppo tempo, muore! (e no, non puoi rianimarlo.)
-- "F": nutri Boris
+- "F": nutri Boris. Nel tempo, la barra del cibo di Boris si svuota: se arriva a zero, perde vita e muore! Assicurati di nutrirlo ogni tanto per tenerlo in vita.
 - "F4": basito
 - "M": riproduci frase iconica #1: *monnezza*
 - "S": riproduci frase iconica #2: *smarmella*
@@ -32,7 +32,7 @@ Durante l'esecuzione, puoi premere i seguenti comandi per attivare le seguenti f
 
 Qui sotto è riportata un'immagine del buon Boris che sguazza.
 
-![Boris che nuota da vero ganzo](boris.png)
+![Boris che nuota da vero ganzo](./images/boris_demo.png)
 
 Buon divertimento e fatemi sapere se ci sono bugs o come si potrebbe migliorare!
 
@@ -40,4 +40,3 @@ Buon divertimento e fatemi sapere se ci sono bugs o come si potrebbe migliorare!
 >
 > - Boris apre la bocca quando respira/mangia
 > - Nutrendo troppo Boris, morirà
-> - Non nutrendo Boris troppo a lungo, morirà
